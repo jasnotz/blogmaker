@@ -1,0 +1,6 @@
+[title]: <> (모르겠어요)
+[icon]: <> ()
+[server]: <> ()
+[website_root]: <> (/var/www/html)
+[domain]: <> (https://skipset.com)
+[posts_directory] <> (posts)
