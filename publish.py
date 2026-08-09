@@ -207,9 +207,10 @@ TOC_END = """ </ul> """
 TOC_ITEM_TEMPLATE = """
 
 <li>
-    <span class="post-meta">{}</span>
+    <span class="post-meta">{0}</span>
+    <span class="post-category" style="color:#888; margin-left:8px;">{3}</span>
     <h3 style="margin-top:12px">
-      <a class="post-link" href="{}">{}</a>
+      <a class="post-link" href="{1}">{2}</a>
     </h3>
 </li>
 
@@ -515,9 +516,18 @@ def get_order(metadata):
         return 0
 
 
+def format_categories(metadata):
+    return ', '.join(c.capitalize() for c in sorted(metadata.get('categories', ())))
+
+
 def make_toc_item(global_config, metadata, root_path):
     link = metadata_to_path(global_config, metadata)
-    return TOC_ITEM_TEMPLATE.format(get_printed_date(metadata), root_path + '/' + link, metadata['title'])
+    return TOC_ITEM_TEMPLATE.format(
+        get_printed_date(metadata),
+        root_path + '/' + link,
+        metadata['title'],
+        format_categories(metadata)
+    )
 
 
 def make_toc(toc_items, global_config, all_categories, category=None, include_search=False, search_index_data=None):
