@@ -354,7 +354,26 @@ _SCRIPT_STYLE_RE = re.compile(r'<(script|style)\b[^>]*>.*?</\1>', re.IGNORECASE 
 _ENTITY_RE = re.compile(r'&nbsp;|&lt;|&gt;|&amp;')
 _ENTITY_MAP = {'&nbsp;': ' ', '&lt;': '<', '&gt;': '>', '&amp;': '&'}
 _MONTHS = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+MATH_BLOCK_RE = re.compile(r'\$\$.*?\$\$', re.DOTALL)
+BARE_UNDERLINE_RE = re.compile(r'^[=\-]+$')
 
+def fix_math_setext_conflicts(text):
+    """
+    $$...$$ 블록 안에 '=' 또는 '-' 로만 이루어진 줄이 있으면
+    pandoc이 이를 Setext 헤더 밑줄로 오인해서 수식이 깨진다.
+    해당 줄을 바로 윗줄에 붙여서 이 충돌을 피한다.
+    """
+    def fix_block(match):
+        block = match.group(0)
+        lines = block.split('\n')
+        fixed = []
+        for line in lines:
+            if BARE_UNDERLINE_RE.match(line.strip()) and fixed:
+                fixed[-1] = fixed[-1].rstrip() + ' ' + line.strip()
+            else:
+                fixed.append(line)
+        return '\n'.join(fixed)
+    return MATH_BLOCK_RE.sub(fix_block, text)
 
 def extract_metadata(fil, filename=None):
     metadata = {}
@@ -595,12 +614,13 @@ if __name__ == '__main__':
         with open(file_location, encoding='utf-8') as f:
             metadata = extract_metadata(f, filename)
             body_content = f.read()
-
+        body_content = fix_math_setext_conflicts(body_content) 
         path = metadata_to_path(global_config, metadata)
         options = metadata.get('pandoc', '')
 
         pandoc_extensions = (
             'gfm'
+            '+tex_math_dollars'
             '+definition_lists'
             '+superscript'
             '+subscript'
