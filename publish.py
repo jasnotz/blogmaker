@@ -375,6 +375,25 @@ def fix_math_setext_conflicts(text):
         return '\n'.join(fixed)
     return MATH_BLOCK_RE.sub(fix_block, text)
 
+IMAGE_LINK_RE = re.compile(r'(!\[[^\]]*\]\()([^)\s]+)((?:\s+"[^"]*")?\))')
+
+def fix_image_paths(text, root_path):
+    """
+    마크다운 이미지 링크 안의 'images/...' 경로를,
+    실제 출력 파일 위치(site/posts/년/월/일/파일.html) 기준
+    상대경로(root_path/images/...)로 자동 변환한다.
+    예: ../images/그림.jpg  ->  ../../../../images/그림.jpg
+    """
+    def fix_link(match):
+        prefix, url, suffix = match.group(1), match.group(2), match.group(3)
+        idx = url.rfind('images/')
+        if idx == -1:
+            return match.group(0)
+        rest = url[idx + len('images/'):]
+        new_url = posixpath.join(root_path, 'images', rest)
+        return prefix + new_url + suffix
+    return IMAGE_LINK_RE.sub(fix_link, text)
+
 def extract_metadata(fil, filename=None):
     metadata = {}
     if filename:
@@ -614,7 +633,11 @@ if __name__ == '__main__':
         with open(file_location, encoding='utf-8') as f:
             metadata = extract_metadata(f, filename)
             body_content = f.read()
-        body_content = fix_math_setext_conflicts(body_content) 
+
+        root_path = '../../../..'                          # <-- 위로 옮김
+        body_content = fix_math_setext_conflicts(body_content)
+        body_content = fix_image_paths(body_content, root_path)   # <-- 추가
+
         path = metadata_to_path(global_config, metadata)
         options = metadata.get('pandoc', '')
 
@@ -635,7 +658,6 @@ if __name__ == '__main__':
         result = subprocess.run(cmd, input=body_content, capture_output=True, text=True, encoding='utf-8')
         pandoc_output = result.stdout
 
-        root_path = '../../../..'
         total_file_contents = ''.join((
             PRE_HEADER,
             RSS_LINK.format(root_path, metadata['title']),
