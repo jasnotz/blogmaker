@@ -394,6 +394,16 @@ def fix_image_paths(text, root_path):
         return prefix + new_url + suffix
     return IMAGE_LINK_RE.sub(fix_link, text)
 
+IMG_P_RE = re.compile(r'<p>(\s*<img[^>]*/?>\s*)</p>')
+
+def center_images(html):
+    """
+    pandoc이 이미지 단독 문단을 <p><img .../></p> 로 감싸서 내보내는데,
+    이걸 <center><img .../></center> 로 바꿔서 무조건 가운데 정렬한다.
+    텍스트와 이미지가 같은 문단에 섞여 있는 경우(인라인 아이콘 등)는 건드리지 않는다.
+    """
+    return IMG_P_RE.sub(lambda m: '<center>' + m.group(1).strip() + '</center>', html)
+
 def extract_metadata(fil, filename=None):
     metadata = {}
     if filename:
@@ -657,6 +667,7 @@ if __name__ == '__main__':
 
         result = subprocess.run(cmd, input=body_content, capture_output=True, text=True, encoding='utf-8')
         pandoc_output = result.stdout
+        pandoc_output = center_images(pandoc_output)
 
         total_file_contents = ''.join((
             PRE_HEADER,
